@@ -79,6 +79,7 @@
         }
 
     </style>
+<meta name="studyos-build" content="Sandeep Study OS v6.5 • Firebase e1c2f • RBE removed">
 </head>
 <body class="min-h-screen flex flex-col pb-12 bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100" id="appBody">
 <!-- Top Navigation Bar -->
@@ -147,6 +148,7 @@
 <button class="pb-2 border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200" id="tabPOBtn" onclick="openPOTab()"><i class="fa-solid fa-stopwatch"></i> PO Dashboard</button>
 <button class="pb-2 border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200" id="tabMockAnalyzerFinalBtn" onclick="openMockAnalyzerFinalTab()"><i class="fa-solid fa-vial"></i> Mock Analyzer Final</button>
 </div>
+
 
 
 <!-- MOCK ANALYZER FINAL TAB: embeds the uploaded Mock_Analyzer_Final file unchanged. -->
@@ -2985,7 +2987,7 @@ function switchTab(tab) {
         }
 
         // CLOUD SYNC ADDON (non-destructive; existing local data remains intact)
-        const STUDYOS_FIREBASE_CONFIG = null; // Firebase web config object yahan paste hoga.
+        const STUDYOS_FIREBASE_CONFIG = { projectId: "sandeep-study-os-e1c2f" };
         const STUDYOS_CLOUD_USER = 'sandeep-study-os';
         function showCloudSetup(){
             alert("Cloud Sync UI ready hai. Firebase project ki Web App config is HTML me add karni hogi. Existing local data delete nahi hoga.");
@@ -3005,13 +3007,13 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBstnBg9KyxzHqmuXTDx3Am9_y0-h8dVgY",
-  authDomain: "sandeep-study-os.firebaseapp.com",
-  projectId: "sandeep-study-os",
-  storageBucket: "sandeep-study-os.firebasestorage.app",
-  messagingSenderId: "1033748493529",
-  appId: "1:1033748493529:web:965101115fcd6269d07ac8",
-  measurementId: "G-BCKR8ZC8Y6"
+  apiKey: "AIzaSyBfpaYa8h4GXXlXEsTRChICT-hKQPgz1xU",
+  authDomain: "sandeep-study-os-e1c2f.firebaseapp.com",
+  projectId: "sandeep-study-os-e1c2f",
+  storageBucket: "sandeep-study-os-e1c2f.firebasestorage.app",
+  messagingSenderId: "972183045559",
+  appId: "1:972183045559:web:cafcb16290fed11c825432",
+  measurementId: "G-7JVE45P5BT"
 };
 
 const fbApp = initializeApp(firebaseConfig);
@@ -5222,7 +5224,7 @@ if(document.readyState!=='loading'){addNav();injectUI();}
       includes: {
         ...(baseBackup.includes || {}),
         embeddedPO: true,
-        embeddedMockAnalyzerFinal: true
+        embeddedMockAnalyzerFinal: true,
       },
       embeddedTabs
     };
