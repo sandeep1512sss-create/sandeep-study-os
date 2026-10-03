@@ -79,9 +79,30 @@
         }
 
     </style>
-<meta name="studyos-build" content="Sandeep Study OS v6.5 • Firebase e1c2f • RBE removed">
+
+<style id="sandeep-auth-gate-style">
+#sandeepAuthGate{position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at top,#312e81 0,#0f172a 45%,#020617 100%);font-family:Inter,system-ui,sans-serif}
+#sandeepAuthGate.hidden{display:none}
+.sag-card{width:min(430px,100%);border:1px solid rgba(255,255,255,.14);background:rgba(15,23,42,.82);backdrop-filter:blur(18px);border-radius:28px;padding:30px;box-shadow:0 25px 80px rgba(0,0,0,.45);color:#fff;text-align:center}
+.sag-logo{width:64px;height:64px;margin:0 auto 16px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#6366f1,#8b5cf6);font-size:24px;font-weight:900;box-shadow:0 12px 30px rgba(99,102,241,.35)}
+.sag-title{font-size:24px;font-weight:900;letter-spacing:-.02em}.sag-sub{font-size:12px;color:#cbd5e1;margin:8px 0 22px;line-height:1.6}
+#sandeepGoogleLogin{width:100%;padding:12px 16px;border:0;border-radius:14px;background:#fff;color:#0f172a;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px}
+#sandeepGoogleLogin:disabled{opacity:.65;cursor:wait}.sag-note{font-size:10px;color:#94a3b8;margin-top:14px}.sag-error{display:none;margin-top:12px;padding:9px 10px;border-radius:10px;background:rgba(244,63,94,.12);border:1px solid rgba(244,63,94,.3);color:#fecdd3;font-size:11px;text-align:left}
+</style>
 </head>
 <body class="min-h-screen flex flex-col pb-12 bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100" id="appBody">
+<div id="sandeepAuthGate">
+  <div class="sag-card">
+    <div class="sag-logo">S</div>
+    <div class="sag-title">Sandeep Study OS</div>
+    <div class="sag-sub">Apna personal Study Dashboard use karne ke liye Google account se login karein.<br>Login ke baad existing dashboard ke saare tools available rahenge.</div>
+    <button id="sandeepGoogleLogin" type="button"><span style="font-size:18px">G</span><span>Continue with Google</span></button>
+    <div id="googleLoginRender" class="hidden mt-3 flex justify-center"></div>
+    <div id="sandeepAuthError" class="sag-error"></div>
+    <div class="sag-note">Your Study OS data is stored locally and can be backed up to your Google Drive AppData.</div>
+  </div>
+</div>
+
 <!-- Top Navigation Bar -->
 <header class="border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 sticky top-0 z-50 backdrop-blur-md">
 <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
@@ -148,7 +169,6 @@
 <button class="pb-2 border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200" id="tabPOBtn" onclick="openPOTab()"><i class="fa-solid fa-stopwatch"></i> PO Dashboard</button>
 <button class="pb-2 border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200" id="tabMockAnalyzerFinalBtn" onclick="openMockAnalyzerFinalTab()"><i class="fa-solid fa-vial"></i> Mock Analyzer Final</button>
 </div>
-
 
 
 <!-- MOCK ANALYZER FINAL TAB: embeds the uploaded Mock_Analyzer_Final file unchanged. -->
@@ -432,7 +452,7 @@
 <button class="flex-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 dark:text-indigo-300 text-xs py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-700" onclick="validateStudyOSBackupFile()"><i class="fa-solid fa-shield-halved"></i> Validate Backup</button>
 </div>
 <p class="text-[9px] text-slate-500 dark:text-slate-400 mt-2">
-    One file mein Sandeep + PO + Mock Analyzer Final + Screenshots + Syllabus + Logs + Songs + Manual/Pomodoro + Calendar + Settings sab save/restore honge. Restore se pehle automatic safety backup download hoga; Validate Backup se file check kar sakte hain.
+    One file mein Sandeep + PO + Mock Analyzer Final + RBE 50 Day + Screenshots + Syllabus + Logs + Songs + Manual/Pomodoro + Calendar + Settings sab save/restore honge. Restore se pehle automatic safety backup download hoga; Validate Backup se file check kar sakte hain.
 </p>
 <div class="mt-3 p-3 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20">
 <div class="flex justify-between items-center gap-2 mb-2"><span class="text-[11px] font-bold text-indigo-700 dark:text-indigo-300"><i class="fa-solid fa-cloud"></i> Cloud Sync Ready</span><span class="text-[10px] text-slate-500" id="cloudSyncStatus">Not connected</span></div>
@@ -936,7 +956,7 @@ function __studyOSHideAllViews() {
         "mockImporterView",
         "v7ToolsView",
         "poDashboardView",
-        "mockAnalyzerFinalView",
+        "mockAnalyzerFinalView"
     ].forEach(id => document.getElementById(id)?.classList.add("hidden"));
 }
 
@@ -2987,7 +3007,7 @@ function switchTab(tab) {
         }
 
         // CLOUD SYNC ADDON (non-destructive; existing local data remains intact)
-        const STUDYOS_FIREBASE_CONFIG = { projectId: "sandeep-study-os-e1c2f" };
+        const STUDYOS_FIREBASE_CONFIG = null; // Firebase web config object yahan paste hoga.
         const STUDYOS_CLOUD_USER = 'sandeep-study-os';
         function showCloudSetup(){
             alert("Cloud Sync UI ready hai. Firebase project ki Web App config is HTML me add karni hogi. Existing local data delete nahi hoga.");
@@ -3000,122 +3020,196 @@ function switchTab(tab) {
 
         getNewQuote();
     </script>
-<!-- Firebase Cloud Sync + Google Login Addon -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+<!-- ================= NEW GOOGLE LOGIN SYSTEM (NO FIREBASE AUTH) ================= -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+(function(){
+'use strict';
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBfpaYa8h4GXXlXEsTRChICT-hKQPgz1xU",
-  authDomain: "sandeep-study-os-e1c2f.firebaseapp.com",
-  projectId: "sandeep-study-os-e1c2f",
-  storageBucket: "sandeep-study-os-e1c2f.firebasestorage.app",
-  messagingSenderId: "972183045559",
-  appId: "1:972183045559:web:cafcb16290fed11c825432",
-  measurementId: "G-7JVE45P5BT"
-};
+// ONE-TIME SETUP: Replace this with your Google OAuth 2.0 Web Client ID.
+// Example: 1234567890-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com
+const GOOGLE_CLIENT_ID = '1033748493529-u8ru12t83b1v4f8oi3pu0rlhcpv3l9dd.apps.googleusercontent.com';
+const GOOGLE_ORIGIN = location.origin;
+const SESSION_KEY = 'sandeepGoogleSessionV2';
+let googleUser = null;
+let driveAccessToken = null;
+let tokenClient = null;
 
-const fbApp = initializeApp(firebaseConfig);
-const auth = getAuth(fbApp);
-const firestore = getFirestore(fbApp);
-const provider = new GoogleAuthProvider();
-provider.setCustomParameters({ prompt: 'select_account' });
-let cloudUser = null;
-
-function addCloudLoginUI(){
-  const status = document.getElementById('cloudSyncStatus');
-  if(!status || document.getElementById('firebaseGoogleLoginBtn')) return;
-  const box = status.closest('.mt-3');
-  if(!box) return;
-  const row = document.createElement('div');
-  row.className='grid grid-cols-2 gap-2 mt-2';
-  row.innerHTML=`<button id="firebaseGoogleLoginBtn" class="bg-white text-slate-800 border border-slate-300 text-xs py-1.5 rounded-xl font-bold">Google Login</button><button id="firebaseLogoutBtn" class="bg-rose-600 text-white text-xs py-1.5 rounded-xl font-bold hidden">Logout</button>`;
-  box.appendChild(row);
-  document.getElementById('firebaseGoogleLoginBtn').onclick=loginGoogle;
-  document.getElementById('firebaseLogoutBtn').onclick=()=>signOut(auth);
+function el(id){ return document.getElementById(id); }
+function showGateError(msg){
+  const e=el('sandeepAuthError');
+  if(e){ e.textContent=msg; e.style.display='block'; }
+  const b=el('sandeepGoogleLogin');
+  if(b){ b.disabled=false; b.innerHTML='<span style="font-size:18px">G</span><span>Continue with Google</span>'; }
+}
+function clearGateError(){ const e=el('sandeepAuthError'); if(e)e.style.display='none'; }
+function setGateLoading(on){
+  const b=el('sandeepGoogleLogin'); if(!b)return;
+  b.disabled=on; b.innerHTML=on?'<span>Connecting…</span>':'<span style="font-size:18px">G</span><span>Continue with Google</span>';
+}
+function b64urlDecode(str){
+  const pad='='.repeat((4-str.length%4)%4);
+  return decodeURIComponent(atob((str+pad).replace(/-/g,'+').replace(/_/g,'/')).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+}
+function decodeJwt(token){
+  const p=token.split('.')[1];
+  return JSON.parse(b64urlDecode(p));
+}
+function saveSession(payload){
+  googleUser={email:payload.email||'',name:payload.name||payload.email||'Google User',picture:payload.picture||'',sub:payload.sub||''};
+  localStorage.setItem(SESSION_KEY,JSON.stringify(googleUser));
+}
+function loadSession(){
+  try{ googleUser=JSON.parse(localStorage.getItem(SESSION_KEY)||'null'); }catch(e){googleUser=null;}
+}
+function clearSession(){ googleUser=null; driveAccessToken=null; localStorage.removeItem(SESSION_KEY); }
+function unlockDashboard(){
+  const g=el('sandeepAuthGate'); if(g)g.classList.add('hidden');
+  document.body.classList.remove('auth-locked');
+  updateAccountUI();
+}
+function lockDashboard(){
+  const g=el('sandeepAuthGate'); if(g)g.classList.remove('hidden');
+  document.body.classList.add('auth-locked');
+}
+function updateAccountUI(){
+  const status=el('cloudSyncStatus');
+  if(status) status.innerText=googleUser?'Connected: '+googleUser.email:'Not connected';
+  const old=el('firebaseGoogleLoginBtn'); if(old)old.remove();
+  const oldLogout=el('firebaseLogoutBtn'); if(oldLogout)oldLogout.remove();
 }
 
-async function loginGoogle(){
-  try { await signInWithPopup(auth, provider); }
-  catch(e){ console.error('Google Login error', e); const msg = e?.code === 'auth/unauthorized-domain' ? 'Firebase Authentication me is workers.dev domain ko Authorized domains me add karna hoga.' : (e?.message || String(e)); alert('Google Login error: '+msg); }
-}
-
-onAuthStateChanged(auth, user=>{
-  cloudUser=user;
-  addCloudLoginUI();
-  const status=document.getElementById('cloudSyncStatus');
-  const login=document.getElementById('firebaseGoogleLoginBtn');
-  const logout=document.getElementById('firebaseLogoutBtn');
-  if(user){
-    if(status) status.innerText='Connected: '+(user.email||'Google');
-    if(login){ login.innerText='✓ '+(user.email||'Google'); login.disabled=true; }
-    if(logout) logout.classList.remove('hidden');
-  } else {
-    if(status) status.innerText='Not connected';
-    if(login){ login.innerText='Google Login'; login.disabled=false; }
-    if(logout) logout.classList.add('hidden');
+function initGoogle(){
+  if(GOOGLE_CLIENT_ID.indexOf('PASTE_YOUR')===0){
+    showGateError('Google Login system ready hai. Bas Google OAuth Web Client ID add karna baki hai.');
+    return;
   }
-});
-
-function idbStoreData(storeName){
-  return new Promise((resolve,reject)=>{
-    try {
-      const tx=db.transaction([storeName],'readonly');
-      const req=tx.objectStore(storeName).getAll();
-      req.onsuccess=()=>resolve(req.result||[]); req.onerror=()=>reject(req.error);
-    } catch(e){ reject(e); }
+  if(!window.google || !google.accounts || !google.accounts.id){
+    showGateError('Google Login service load nahi hui. Internet connection check karke page refresh karein.'); return;
+  }
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleCredential,
+    auto_select: false,
+    cancel_on_tap_outside: false
   });
 }
+async function handleCredential(response){
+  clearGateError(); setGateLoading(true);
+  try{
+    const payload=decodeJwt(response.credential);
+    if(payload.aud!==GOOGLE_CLIENT_ID) throw new Error('Google Client ID mismatch.');
+    if(payload.iss!=='https://accounts.google.com' && payload.iss!=='accounts.google.com') throw new Error('Invalid Google login issuer.');
+    if(payload.exp && Date.now()/1000>payload.exp) throw new Error('Google login token expired. Please try again.');
+    saveSession(payload);
+    unlockDashboard();
+  }catch(e){ showGateError(e.message||'Google login failed.'); }
+}
+function renderGoogleButton(){
+  const holder=el('googleLoginRender');
+  if(!holder)return;
+  holder.innerHTML='';
+  if(GOOGLE_CLIENT_ID.indexOf('PASTE_YOUR')===0)return;
+  if(window.google?.accounts?.id){
+    google.accounts.id.renderButton(holder,{theme:'outline',size:'large',shape:'pill',text:'continue_with',width:340});
+  }
+}
+window.loginGoogle=async function(){
+  clearGateError();
+  if(GOOGLE_CLIENT_ID.indexOf('PASTE_YOUR')===0){
+    showGateError('Pehle GOOGLE_CLIENT_ID set karna hoga. Main file me sirf ek jagah change karni hai.'); return;
+  }
+  try{ initGoogle(); renderGoogleButton(); google.accounts.id.prompt(); }
+  catch(e){ showGateError(e.message||'Google Login failed.'); }
+};
+window.logoutGoogle=function(){ clearSession(); lockDashboard(); };
+
+// Drive AppData sync: uses the same Google account, no Firebase API key.
+function initDriveTokenClient(){
+  if(GOOGLE_CLIENT_ID.indexOf('PASTE_YOUR')===0 || !window.google?.accounts?.oauth2)return;
+  tokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:GOOGLE_CLIENT_ID,
+    scope:'https://www.googleapis.com/auth/drive.appdata',
+    callback:(resp)=>{ driveAccessToken=resp.access_token; }
+  });
+}
+function getDriveToken(){
+  return new Promise((resolve,reject)=>{
+    if(driveAccessToken)return resolve(driveAccessToken);
+    if(!tokenClient)return reject(new Error('Google Drive sync setup incomplete.'));
+    tokenClient.callback=(resp)=>{ if(resp.error)return reject(new Error(resp.error)); driveAccessToken=resp.access_token; resolve(driveAccessToken); };
+    tokenClient.requestAccessToken({prompt:''});
+  });
+}
+async function driveRequest(url,opts={}){
+  const token=await getDriveToken();
+  const r=await fetch(url,{...opts,headers:{...(opts.headers||{}),Authorization:'Bearer '+token}});
+  if(!r.ok)throw new Error(await r.text());
+  return r;
+}
+async function findDriveBackup(){
+  const q=encodeURIComponent("name='sandeep-study-os-backup.json' and 'appDataFolder' in parents and trashed=false");
+  const r=await driveRequest('https://www.googleapis.com/drive/v3/files?q='+q+'&spaces=appDataFolder&fields=files(id,name,modifiedTime)');
+  return (await r.json()).files?.[0]||null;
+}
+async function uploadDriveBackup(){
+  const data=await collectAllData();
+  const blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+  const existing=await findDriveBackup();
+  const metadata={name:'sandeep-study-os-backup.json',mimeType:'application/json'};
+  if(!existing) metadata.parents=['appDataFolder'];
+  const boundary='studyos_'+Date.now();
+  const body='--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(metadata)+'\r\n--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+await blob.text()+'\r\n--'+boundary+'--';
+  const url=existing?'https://www.googleapis.com/upload/drive/v3/files/'+existing.id+'?uploadType=multipart':'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+  await driveRequest(url,{method:existing?'PATCH':'POST',headers:{'Content-Type':'multipart/related; boundary='+boundary},body});
+}
+async function downloadDriveBackup(){
+  const f=await findDriveBackup(); if(!f)throw new Error('Google Drive me abhi backup nahi hai.');
+  const r=await driveRequest('https://www.googleapis.com/drive/v3/files/'+f.id+'?alt=media');
+  return r.json();
+}
+window.cloudSyncNow=async function(){
+  const status=el('cloudSyncStatus');
+  if(!googleUser){ alert('Pehle Google Login karein.'); return; }
+  try{
+    if(status)status.innerText='Google Drive access...';
+    await uploadDriveBackup();
+    if(status)status.innerText='✓ Google Drive backup saved';
+    alert('Study OS ka complete backup Google Drive AppData me save ho gaya.');
+  }catch(e){ if(status)status.innerText='Drive sync failed'; alert('Google Drive Sync error: '+(e.message||e)); }
+};
+window.restoreFromCloud=async function(){
+  if(!googleUser){ alert('Pehle Google Login karein.'); return; }
+  try{
+    const data=await downloadDriveBackup();
+    if(typeof studyOSRestoreCompleteBackup==='function' && data?.format==='StudyOS-Complete-Backup') await studyOSRestoreCompleteBackup(data);
+    else if(typeof restoreAllData==='function') await restoreAllData(data);
+    alert('Google Drive se data restore ho gaya. Page reload hoga.'); location.reload();
+  }catch(e){ alert('Google Drive Restore error: '+(e.message||e)); }
+};
+window.showCloudSetup=function(){
+  alert('New Google Login + Google Drive Sync system active hai. Firebase API key ki zarurat nahi hai. GOOGLE_CLIENT_ID ek baar add karna hoga.');
+};
+
+window.addEventListener('DOMContentLoaded',()=>{
+  loadSession();
+  const b=el('sandeepGoogleLogin');
+  if(b)b.onclick=()=>{ const h=el('googleLoginRender'); if(h)h.classList.toggle('hidden'); window.loginGoogle(); };
+  const logout=document.createElement('button'); logout.id='newGoogleLogoutBtn'; logout.textContent='Logout'; logout.style.cssText='position:fixed;right:14px;bottom:14px;z-index:99999;background:#ef4444;color:white;border:0;padding:8px 12px;border-radius:10px;font-weight:800;font-size:11px;display:none;';
+  logout.onclick=window.logoutGoogle; document.body.appendChild(logout);
+  setTimeout(()=>{ initGoogle(); initDriveTokenClient(); renderGoogleButton(); },800);
+  if(googleUser){unlockDashboard();logout.style.display='block';}else{lockDashboard();}
+  const obs=new MutationObserver(()=>{ if(googleUser)logout.style.display='block'; }); obs.observe(document.body,{childList:true});
+});
+
+// Keep the existing complete backup engine available to Drive sync.
 async function collectAllData(){
-  if(typeof studyOSCollectCompleteBackup === 'function') return studyOSCollectCompleteBackup();
+  if(typeof studyOSCollectCompleteBackup==='function') return studyOSCollectCompleteBackup();
+  if(typeof exportData==='function') return {format:'StudyOS-Complete-Backup',localStorage:Object.fromEntries(Object.keys(localStorage).map(k=>[k,localStorage.getItem(k)]))};
   throw new Error('Complete backup engine unavailable');
 }
-async function restoreAllData(data){
-  if(typeof studyOSRestoreCompleteBackup === 'function' && data?.format === 'StudyOS-Complete-Backup'){
-    return studyOSRestoreCompleteBackup(data);
-  }
-  if(data?.localStorage) Object.entries(data.localStorage).forEach(([k,v])=>localStorage.setItem(k,v));
-  if(data?.stores){
-    for(const [name,items] of Object.entries(data.stores)){
-      if(db.objectStoreNames.contains(name)) await studyOSRestoreStore(name, studyOSDeserializeValue(items || []));
-    }
-  }
-}
-
-window.showCloudSetup=async function(){
-  if(!cloudUser) return loginGoogle();
-  alert('Firebase connected hai. Sync Now se is device ka Study OS data cloud me save hoga. Dusre device par same Google account se login karke Sync Now dabane par cloud data restore kar sakte hain.');
-};
-window.cloudSyncNow=async function(){
-  const el=document.getElementById('cloudSyncStatus');
-  if(!cloudUser){ if(el) el.innerText='Google login required'; await loginGoogle(); return; }
-  try{
-    if(el) el.innerText='Checking cloud...';
-    const ref=doc(firestore,'users',cloudUser.uid,'studyOS','main');
-    const snap=await getDoc(ref);
-    const localData=await collectAllData();
-    if(!snap.exists()){
-      await setDoc(ref,{payload:localData, updatedAt:serverTimestamp()});
-      if(el) el.innerText='✓ First cloud backup saved';
-      return;
-    }
-    const choice=confirm('OK = is device ka current data CLOUD par upload/overwrite karein.\n\nCancel = CLOUD data is device par restore karein.');
-    if(choice){
-      await setDoc(ref,{payload:localData, updatedAt:serverTimestamp()});
-      if(el) el.innerText='✓ Cloud backup updated';
-    }else{
-      const cloud=snap.data()?.payload;
-      if(!cloud) throw new Error('Cloud backup empty hai');
-      await restoreAllData(cloud);
-      if(el) el.innerText='✓ Cloud data restored';
-      alert('Cloud data restore ho gaya. Page reload ho raha hai.');
-      location.reload();
-    }
-  }catch(e){ console.error(e); if(el) el.innerText='Sync failed'; alert('Cloud Sync error: '+e.message); }
-};
-
-window.addEventListener('DOMContentLoaded',addCloudLoginUI);
+window.addEventListener('load',()=>{setTimeout(()=>{initGoogle();initDriveTokenClient();renderGoogleButton();},1200);});
+})();
 </script>
 <!-- ================= STUDY OS V7 SMART UPGRADE (NON-DESTRUCTIVE) ================= -->
 <style>
@@ -5123,6 +5217,9 @@ if(document.readyState!=='loading'){addNav();injectUI();}
 </script>
 
 
+
+
+
 <script>
 (function () {
   const frameIds = ["poDashboardFrame", "mockAnalyzerFinalFrame"];
@@ -5224,7 +5321,7 @@ if(document.readyState!=='loading'){addNav();injectUI();}
       includes: {
         ...(baseBackup.includes || {}),
         embeddedPO: true,
-        embeddedMockAnalyzerFinal: true,
+        embeddedMockAnalyzerFinal: true
       },
       embeddedTabs
     };
@@ -6750,5 +6847,26 @@ if(document.readyState!=='loading'){addNav();injectUI();}
 })();
 </script>
 
+
+<style id="sandeep-account-style">
+#sandeepAccountChip{position:fixed;right:14px;bottom:14px;z-index:9990;display:none;align-items:center;gap:8px;padding:7px 10px;border-radius:14px;background:rgba(15,23,42,.9);color:#fff;font-size:10px;border:1px solid rgba(255,255,255,.12);box-shadow:0 8px 30px rgba(0,0,0,.22)}
+#sandeepAccountChip img{width:24px;height:24px;border-radius:50%}
+#sandeepAccountChip button{border:0;background:#e11d48;color:#fff;border-radius:9px;padding:5px 8px;font-size:9px;font-weight:800;cursor:pointer}
+</style>
+<div id="sandeepAccountChip"><img id="sandeepUserPhoto" alt=""><span id="sandeepUserEmail"></span><button id="sandeepLogoutTop" type="button">Logout</button></div>
+<script type="module">
+import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+const topAuth=getAuth();
+const chip=document.getElementById('sandeepAccountChip');
+const email=document.getElementById('sandeepUserEmail');
+const photo=document.getElementById('sandeepUserPhoto');
+const logout=document.getElementById('sandeepLogoutTop');
+logout?.addEventListener('click',()=>signOut(topAuth));
+onAuthStateChanged(topAuth,u=>{
+ if(!chip)return;
+ chip.style.display=u?'flex':'none';
+ if(u){email.textContent=u.email||'Google account'; if(u.photoURL){photo.src=u.photoURL;photo.style.display='block'}else photo.style.display='none';}
+});
+</script>
 </body>
 </html>
