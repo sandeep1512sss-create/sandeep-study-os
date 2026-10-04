@@ -3219,6 +3219,26 @@ async function studyOSRestoreCloudData(data){
   }
 }
 
+async function studyOSHasMeaningfulLocalData(){
+  try{
+    const ignored=new Set(['sandeepGoogleSessionV2','studyOSLastLocalChangeAt','studyOSLastCloudUploadAt']);
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(k && !ignored.has(k)) return true;
+    }
+    if(typeof db!=='undefined' && db){
+      for(const storeName of Array.from(db.objectStoreNames)){
+        const items=await studyOSGetStoreData(storeName);
+        if(Array.isArray(items) && items.length) return true;
+      }
+    }
+    return false;
+  }catch(e){
+    console.warn('StudyOS local data check:',e);
+    return true;
+  }
+}
+
 async function studyOSCloudBootstrap(){
   if(studyOSBootstrapDone || !googleUser)return;
   studyOSBootstrapDone=true;
@@ -3229,6 +3249,18 @@ async function studyOSCloudBootstrap(){
     const data=result.data;
     const cloudSavedAt=Number(data?.__studyOSCloudMeta?.savedAt||new Date(result.file.modifiedTime||0).getTime()||0);
     const localChangedAt=Number(localStorage.getItem('studyOSLastLocalChangeAt')||0);
+    const hasLocalData=await studyOSHasMeaningfulLocalData();
+
+    // A fresh/empty device must restore cloud data even if an old sync timestamp
+    // was left behind by an earlier version of the app.
+    if(!hasLocalData){
+      if(status)status.innerText='☁ Restoring your cloud data…';
+      await studyOSRestoreCloudData(data);
+      if(status)status.innerText='✓ Cloud data restored';
+      setTimeout(()=>location.reload(),700);
+      return;
+    }
+
     if(cloudSavedAt>localChangedAt){
       if(status)status.innerText='☁ New cloud backup found…';
       await studyOSRestoreCloudData(data);
