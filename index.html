@@ -460,7 +460,7 @@
 <button class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs py-1.5 rounded-xl font-bold" onclick="cloudSyncNow()">Sync Now</button>
 <button class="bg-slate-700 hover:bg-slate-600 text-white text-xs py-1.5 rounded-xl font-bold" onclick="showCloudSetup()">Cloud Setup</button>
 </div>
-<p class="text-[9px] text-slate-500 mt-2">Firebase config add karne ke baad laptop + phone par same cloud data sync hoga.</p>
+<p class="text-[9px] text-slate-500 mt-2">Google Drive Auto Sync: same Google account se laptop + phone par data sync hoga.</p>
 </div>
 </div>
 </div>
@@ -3103,6 +3103,7 @@ async function handleCredential(response){
     if(payload.exp && Date.now()/1000>payload.exp) throw new Error('Google login token expired. Please try again.');
     saveSession(payload);
     unlockDashboard();
+    setTimeout(()=>studyOSCloudBootstrap(),300);
   }catch(e){ showGateError(e.message||'Google login failed.'); }
 }
 function renderGoogleButton(){
@@ -3149,11 +3150,37 @@ async function driveRequest(url,opts={}){
 }
 async function findDriveBackup(){
   const q=encodeURIComponent("name='sandeep-study-os-backup.json' and 'appDataFolder' in parents and trashed=false");
-  const r=await driveRequest('https://www.googleapis.com/drive/v3/files?q='+q+'&spaces=appDataFolder&fields=files(id,name,modifiedTime)');
+  const r=await driveRequest('https://www.googleapis.com/drive/v3/files?q='+q+'&spaces=appDataFolder&fields=files(id,name,modifiedTime,size)');
   return (await r.json()).files?.[0]||null;
 }
-async function uploadDriveBackup(){
+
+let studyOSSyncInFlight=false;
+let studyOSSyncPending=false;
+let studyOSSyncTimer=null;
+let studyOSBootstrapDone=false;
+let studyOSApplyingCloud=false;
+let studyOSLastUploadAt=Number(localStorage.getItem('studyOSLastCloudUploadAt')||0);
+let studyOSLastLocalChangeAt=Number(localStorage.getItem('studyOSLastLocalChangeAt')||0);
+
+function studyOSMarkLocalChange(){
+  if(studyOSApplyingCloud)return;
+  studyOSLastLocalChangeAt=Date.now();
+  try{localStorage.setItem('studyOSLastLocalChangeAt',String(studyOSLastLocalChangeAt));}catch(e){}
+  studyOSScheduleAutoSync();
+}
+
+function studyOSScheduleAutoSync(delay=8000){
+  if(studyOSApplyingCloud || !googleUser)return;
+  if(studyOSSyncTimer)clearTimeout(studyOSSyncTimer);
+  studyOSSyncTimer=setTimeout(()=>studyOSAutoSync(),delay);
+}
+
+async function uploadDriveBackup(force=false){
+  if(!force && studyOSLastLocalChangeAt<=studyOSLastUploadAt)return false;
   const data=await collectAllData();
+  if(data && typeof data==='object' && !Array.isArray(data)){
+    data.__studyOSCloudMeta={savedAt:Date.now(),localChangedAt:studyOSLastLocalChangeAt,accountSub:googleUser?.sub||''};
+  }
   const blob=new Blob([JSON.stringify(data)],{type:'application/json'});
   const existing=await findDriveBackup();
   const metadata={name:'sandeep-study-os-backup.json',mimeType:'application/json'};
@@ -3162,33 +3189,134 @@ async function uploadDriveBackup(){
   const body='--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(metadata)+'\r\n--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+await blob.text()+'\r\n--'+boundary+'--';
   const url=existing?'https://www.googleapis.com/upload/drive/v3/files/'+existing.id+'?uploadType=multipart':'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
   await driveRequest(url,{method:existing?'PATCH':'POST',headers:{'Content-Type':'multipart/related; boundary='+boundary},body});
+  studyOSLastUploadAt=Date.now();
+  try{localStorage.setItem('studyOSLastCloudUploadAt',String(studyOSLastUploadAt));}catch(e){}
+  return true;
 }
+
 async function downloadDriveBackup(){
-  const f=await findDriveBackup(); if(!f)throw new Error('Google Drive me abhi backup nahi hai.');
+  const f=await findDriveBackup();
+  if(!f)throw new Error('Google Drive me abhi backup nahi hai.');
   const r=await driveRequest('https://www.googleapis.com/drive/v3/files/'+f.id+'?alt=media');
-  return r.json();
+  const data=await r.json();
+  return {data,file:f};
 }
+
+async function studyOSRestoreCloudData(data){
+  studyOSApplyingCloud=true;
+  try{
+    if(typeof studyOSRestoreCompleteBackup==='function' && data?.format==='StudyOS-Complete-Backup') await studyOSRestoreCompleteBackup(data);
+    else if(typeof restoreAllData==='function') await restoreAllData(data);
+    const cloudSavedAt=Number(data?.__studyOSCloudMeta?.savedAt||Date.now());
+    studyOSLastLocalChangeAt=cloudSavedAt;
+    studyOSLastUploadAt=cloudSavedAt;
+    try{
+      localStorage.setItem('studyOSLastLocalChangeAt',String(cloudSavedAt));
+      localStorage.setItem('studyOSLastCloudUploadAt',String(cloudSavedAt));
+    }catch(e){}
+  }finally{
+    studyOSApplyingCloud=false;
+  }
+}
+
+async function studyOSCloudBootstrap(){
+  if(studyOSBootstrapDone || !googleUser)return;
+  studyOSBootstrapDone=true;
+  const status=el('cloudSyncStatus');
+  try{
+    if(status)status.innerText='☁ Checking Google Drive…';
+    const result=await downloadDriveBackup();
+    const data=result.data;
+    const cloudSavedAt=Number(data?.__studyOSCloudMeta?.savedAt||new Date(result.file.modifiedTime||0).getTime()||0);
+    const localChangedAt=Number(localStorage.getItem('studyOSLastLocalChangeAt')||0);
+    if(cloudSavedAt>localChangedAt){
+      if(status)status.innerText='☁ New cloud backup found…';
+      await studyOSRestoreCloudData(data);
+      if(status)status.innerText='✓ Cloud data restored';
+      setTimeout(()=>location.reload(),700);
+      return;
+    }
+    if(localChangedAt>cloudSavedAt){
+      await uploadDriveBackup(true);
+    }
+    if(status)status.innerText='✓ Auto Sync ON';
+    studyOSScheduleAutoSync(12000);
+  }catch(e){
+    // First device may legitimately have no cloud backup yet.
+    if(String(e.message||e).includes('abhi backup nahi')){
+      try{await uploadDriveBackup(true); if(status)status.innerText='✓ Auto Sync ON';}catch(x){if(status)status.innerText='Drive sync pending';}
+    }else{
+      console.warn('StudyOS cloud bootstrap:',e);
+      if(status)status.innerText='Drive sync pending';
+    }
+  }
+}
+
+async function studyOSAutoSync(){
+  studyOSSyncTimer=null;
+  if(!googleUser || studyOSApplyingCloud)return;
+  if(studyOSLastLocalChangeAt<=studyOSLastUploadAt)return;
+  if(!navigator.onLine){studyOSScheduleAutoSync(30000);return;}
+  if(studyOSSyncInFlight){studyOSSyncPending=true;return;}
+  studyOSSyncInFlight=true;
+  const status=el('cloudSyncStatus');
+  try{
+    if(status)status.innerText='☁ Auto-saving…';
+    await uploadDriveBackup(false);
+    if(status)status.innerText='✓ Auto Sync ON';
+  }catch(e){
+    console.warn('StudyOS auto sync failed:',e);
+    if(status)status.innerText='⚠ Sync pending';
+    studyOSScheduleAutoSync(30000);
+  }finally{
+    studyOSSyncInFlight=false;
+    if(studyOSSyncPending){studyOSSyncPending=false;studyOSScheduleAutoSync(1500);}
+  }
+}
+
+// Watch the two storage layers used by StudyOS. Changes are debounced so rapid edits create one backup.
+(function installStudyOSAutoSyncWatchers(){
+  try{
+    const lsSet=Storage.prototype.setItem, lsRemove=Storage.prototype.removeItem, lsClear=Storage.prototype.clear;
+    Storage.prototype.setItem=function(k,v){const r=lsSet.apply(this,arguments); if(this===localStorage && k!=='studyOSLastLocalChangeAt' && k!=='studyOSLastCloudUploadAt')studyOSMarkLocalChange(); return r;};
+    Storage.prototype.removeItem=function(k){const r=lsRemove.apply(this,arguments); if(this===localStorage)studyOSMarkLocalChange(); return r;};
+    Storage.prototype.clear=function(){const r=lsClear.apply(this,arguments); if(this===localStorage)studyOSMarkLocalChange(); return r;};
+  }catch(e){console.warn('StudyOS localStorage watcher unavailable',e);}
+  try{
+    const nativeTx=IDBDatabase.prototype.transaction;
+    IDBDatabase.prototype.transaction=function(){
+      const tx=nativeTx.apply(this,arguments);
+      const mode=arguments[1];
+      if(mode==='readwrite' || mode==='versionchange')tx.addEventListener('complete',()=>studyOSMarkLocalChange(),{once:true});
+      return tx;
+    };
+  }catch(e){console.warn('StudyOS IndexedDB watcher unavailable',e);}
+  window.addEventListener('online',()=>{if(googleUser)studyOSScheduleAutoSync(1500);});
+  window.addEventListener('storage',e=>{if(e.storageArea===localStorage && e.key!=='studyOSLastLocalChangeAt' && e.key!=='studyOSLastCloudUploadAt')studyOSMarkLocalChange();});
+})();
+
 window.cloudSyncNow=async function(){
   const status=el('cloudSyncStatus');
   if(!googleUser){ alert('Pehle Google Login karein.'); return; }
   try{
-    if(status)status.innerText='Google Drive access...';
-    await uploadDriveBackup();
-    if(status)status.innerText='✓ Google Drive backup saved';
-    alert('Study OS ka complete backup Google Drive AppData me save ho gaya.');
+    if(status)status.innerText='Google Drive access…';
+    studyOSLastLocalChangeAt=Math.max(studyOSLastLocalChangeAt,Date.now());
+    await uploadDriveBackup(true);
+    if(status)status.innerText='✓ Google Drive backup saved • Auto Sync ON';
+    alert('Study OS ka complete backup Google Drive AppData me save ho gaya. Auto Sync bhi ON hai.');
   }catch(e){ if(status)status.innerText='Drive sync failed'; alert('Google Drive Sync error: '+(e.message||e)); }
 };
 window.restoreFromCloud=async function(){
   if(!googleUser){ alert('Pehle Google Login karein.'); return; }
+  if(!confirm('Google Drive ka backup is device ke current data par restore karna hai?'))return;
   try{
-    const data=await downloadDriveBackup();
-    if(typeof studyOSRestoreCompleteBackup==='function' && data?.format==='StudyOS-Complete-Backup') await studyOSRestoreCompleteBackup(data);
-    else if(typeof restoreAllData==='function') await restoreAllData(data);
+    const result=await downloadDriveBackup();
+    await studyOSRestoreCloudData(result.data);
     alert('Google Drive se data restore ho gaya. Page reload hoga.'); location.reload();
   }catch(e){ alert('Google Drive Restore error: '+(e.message||e)); }
 };
 window.showCloudSetup=function(){
-  alert('New Google Login + Google Drive Sync system active hai. Firebase API key ki zarurat nahi hai. GOOGLE_CLIENT_ID ek baar add karna hoga.');
+  alert('Google Drive Auto Sync active hai. Same Google account se kisi bhi device par login karne par cloud backup use hoga. Firebase API key ki zarurat nahi hai.');
 };
 
 window.addEventListener('DOMContentLoaded',()=>{
@@ -3197,7 +3325,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   if(b)b.onclick=()=>{ const h=el('googleLoginRender'); if(h)h.classList.toggle('hidden'); window.loginGoogle(); };
   const logout=document.createElement('button'); logout.id='newGoogleLogoutBtn'; logout.textContent='Logout'; logout.style.cssText='position:fixed;right:14px;bottom:14px;z-index:99999;background:#ef4444;color:white;border:0;padding:8px 12px;border-radius:10px;font-weight:800;font-size:11px;display:none;';
   logout.onclick=window.logoutGoogle; document.body.appendChild(logout);
-  setTimeout(()=>{ initGoogle(); initDriveTokenClient(); renderGoogleButton(); },800);
+  setTimeout(()=>{ initGoogle(); initDriveTokenClient(); renderGoogleButton(); if(googleUser)studyOSCloudBootstrap(); },800);
   if(googleUser){unlockDashboard();logout.style.display='block';}else{lockDashboard();}
   const obs=new MutationObserver(()=>{ if(googleUser)logout.style.display='block'; }); obs.observe(document.body,{childList:true});
 });
@@ -3208,7 +3336,7 @@ async function collectAllData(){
   if(typeof exportData==='function') return {format:'StudyOS-Complete-Backup',localStorage:Object.fromEntries(Object.keys(localStorage).map(k=>[k,localStorage.getItem(k)]))};
   throw new Error('Complete backup engine unavailable');
 }
-window.addEventListener('load',()=>{setTimeout(()=>{initGoogle();initDriveTokenClient();renderGoogleButton();},1200);});
+window.addEventListener('load',()=>{setTimeout(()=>{if(googleUser)studyOSCloudBootstrap();},1500);});
 })();
 </script>
 <!-- ================= STUDY OS V7 SMART UPGRADE (NON-DESTRUCTIVE) ================= -->
@@ -6854,19 +6982,8 @@ if(document.readyState!=='loading'){addNav();injectUI();}
 #sandeepAccountChip button{border:0;background:#e11d48;color:#fff;border-radius:9px;padding:5px 8px;font-size:9px;font-weight:800;cursor:pointer}
 </style>
 <div id="sandeepAccountChip"><img id="sandeepUserPhoto" alt=""><span id="sandeepUserEmail"></span><button id="sandeepLogoutTop" type="button">Logout</button></div>
-<script type="module">
-import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
-const topAuth=getAuth();
-const chip=document.getElementById('sandeepAccountChip');
-const email=document.getElementById('sandeepUserEmail');
-const photo=document.getElementById('sandeepUserPhoto');
-const logout=document.getElementById('sandeepLogoutTop');
-logout?.addEventListener('click',()=>signOut(topAuth));
-onAuthStateChanged(topAuth,u=>{
- if(!chip)return;
- chip.style.display=u?'flex':'none';
- if(u){email.textContent=u.email||'Google account'; if(u.photoURL){photo.src=u.photoURL;photo.style.display='block'}else photo.style.display='none';}
-});
+<script>
+// Firebase top-account widget disabled: StudyOS now uses Google Identity Services + Drive AppData.
 </script>
 </body>
 </html>
