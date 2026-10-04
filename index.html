@@ -3278,8 +3278,8 @@ async function studyOSAutoSync(){
 (function installStudyOSAutoSyncWatchers(){
   try{
     const lsSet=Storage.prototype.setItem, lsRemove=Storage.prototype.removeItem, lsClear=Storage.prototype.clear;
-    Storage.prototype.setItem=function(k,v){const r=lsSet.apply(this,arguments); if(this===localStorage && k!=='studyOSLastLocalChangeAt' && k!=='studyOSLastCloudUploadAt')studyOSMarkLocalChange(); return r;};
-    Storage.prototype.removeItem=function(k){const r=lsRemove.apply(this,arguments); if(this===localStorage)studyOSMarkLocalChange(); return r;};
+    Storage.prototype.setItem=function(k,v){const r=lsSet.apply(this,arguments); if(this===localStorage && k!=='studyOSLastLocalChangeAt' && k!=='studyOSLastCloudUploadAt' && k!=='sandeepGoogleSessionV2')studyOSMarkLocalChange(); return r;};
+    Storage.prototype.removeItem=function(k){const r=lsRemove.apply(this,arguments); if(this===localStorage && k!=='sandeepGoogleSessionV2')studyOSMarkLocalChange(); return r;};
     Storage.prototype.clear=function(){const r=lsClear.apply(this,arguments); if(this===localStorage)studyOSMarkLocalChange(); return r;};
   }catch(e){console.warn('StudyOS localStorage watcher unavailable',e);}
   try{
@@ -3292,7 +3292,7 @@ async function studyOSAutoSync(){
     };
   }catch(e){console.warn('StudyOS IndexedDB watcher unavailable',e);}
   window.addEventListener('online',()=>{if(googleUser)studyOSScheduleAutoSync(1500);});
-  window.addEventListener('storage',e=>{if(e.storageArea===localStorage && e.key!=='studyOSLastLocalChangeAt' && e.key!=='studyOSLastCloudUploadAt')studyOSMarkLocalChange();});
+  window.addEventListener('storage',e=>{if(e.storageArea===localStorage && e.key!=='studyOSLastLocalChangeAt' && e.key!=='studyOSLastCloudUploadAt' && e.key!=='sandeepGoogleSessionV2')studyOSMarkLocalChange();});
 })();
 
 window.cloudSyncNow=async function(){
